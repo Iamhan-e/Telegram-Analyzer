@@ -1,3 +1,9 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env from apps/api/ before anything else
+config({ path: resolve(__dirname, '..', '.env') });
+
 import express from 'express';
 import { authMiddleware } from './middleware/auth';
 
