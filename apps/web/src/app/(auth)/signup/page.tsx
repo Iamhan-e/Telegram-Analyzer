@@ -1,0 +1,146 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+
+const signupSchema = z
+  .object({
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type SignupForm = z.infer<typeof signupSchema>;
+
+export default function SignupPage() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignupForm>({
+    resolver: zodResolver(signupSchema),
+  });
+
+  const onSubmit = async (data: SignupForm) => {
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
+
+    setSuccess(true);
+    setLoading(false);
+  };
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen bg-bg">
+        <div className="flex flex-col justify-center items-center w-full px-6">
+          <div className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8 text-center">
+            <h2 className="font-mono text-[13px] text-text mb-4">Check your email</h2>
+            <p className="font-sans text-[12px] text-text2 mb-6">
+              We sent a confirmation link to your email address. Click the link to activate your account, then sign in.
+            </p>
+            <Link href="/login" className="text-accent font-mono text-[11px] hover:underline">
+              Back to sign in
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen bg-bg">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex flex-col justify-center items-start w-1/2 px-20">
+        <h1 className="font-mono text-[48px] text-accent font-medium">
+          tg[scan]
+        </h1>
+        <p className="font-sans text-[14px] text-text2 mt-4 max-w-sm">
+          Create an account to start monitoring Telegram channels.
+        </p>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex flex-col justify-center items-center w-full lg:w-1/2 px-6">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8"
+        >
+          <h2 className="font-mono text-[13px] text-text mb-6">Create account</h2>
+
+          {error && (
+            <div className="bg-red-dim border border-red/30 rounded-card px-3 py-2 mb-4 font-mono text-[11px] text-red">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-4">
+            <Input
+              label="email address"
+              type="email"
+              autoComplete="email"
+              error={errors.email?.message}
+              {...register("email")}
+            />
+
+            <Input
+              label="password"
+              type="password"
+              autoComplete="new-password"
+              error={errors.password?.message}
+              {...register("password")}
+            />
+
+            <Input
+              label="confirm password"
+              type="password"
+              autoComplete="new-password"
+              error={errors.confirmPassword?.message}
+              {...register("confirmPassword")}
+            />
+
+            <Button type="submit" loading={loading} className="w-full mt-2">
+              Create account
+            </Button>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="font-sans text-[12px] text-text3">
+              Already have an account?{" "}
+              <Link href="/login" className="text-accent hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
