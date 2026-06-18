@@ -6,6 +6,7 @@ config({ path: resolve(__dirname, '..', '.env') });
 
 import express from 'express';
 import { authMiddleware } from './middleware/auth';
+import authRouter from './routes/auth';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
@@ -21,9 +22,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Auth routes webhook — exempt from JWT middleware
-// (Supabase calls this with a webhook secret, not a user JWT)
-app.use('/auth', (_req, _res, next) => next());
+// Auth routes — exempt from JWT middleware.
+// POST /auth/provision is called by Supabase on new signup via webhook,
+// signed with SUPABASE_WEBHOOK_SECRET, not a user JWT.
+app.use(authRouter);
 
 // Apply JWT auth to all other routes
 app.use(authMiddleware);
