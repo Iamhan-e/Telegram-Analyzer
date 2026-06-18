@@ -1,0 +1,485 @@
+// =============================================================================
+// Prisma Schema — Telegram Data Analyzer
+// Maps 1:1 to SCHEMA.sql v1.0
+// Database: PostgreSQL 15 (Supabase / local Docker)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum SubscriptionTier {
+  free
+  pro
+  business
+
+  @@map("subscription_tier")
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+  unpaid
+
+  @@map("subscription_status")
+}
+
+enum JobType {
+  full_scrape
+  delta_scrape
+  media_download
+  export
+
+  @@map("job_type")
+}
+
+enum JobStatus {
+  pending
+  running
+  complete
+  failed
+  canceled
+
+  @@map("job_status")
+}
+
+enum MediaType {
+  photo
+  video
+  document
+  audio
+  voice
+  sticker
+  animation
+
+  @@map("media_type")
+}
+
+enum AlertChannel {
+  email
+  slack_webhook
+  webhook
+
+  @@map("alert_channel")
+}
+
+enum ExportFormat {
+  csv
+  json
+
+  @@map("export_format")
+}
+
+// =============================================================================
+// USERS
+// =============================================================================
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  authId       String    @unique @map("auth_id") @db.Uuid
+  email        String    @unique @db.Text
+  displayName  String?   @map("display_name") @db.Text
+  avatarUrl    String?   @map("avatar_url") @db.Text
+  timezone     String    @default("UTC") @db.Text
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  subscription   Subscription?
+  apiKey         ApiKey?
+  trackedChannels TrackedChannel[]
+  messages       Message[]
+  mediaFiles     MediaFile[]
+  storageUsage   StorageUsage?
+  jobs           Job[]
+  alertRules     AlertRule[]
+  exports        Export[]
+  channelFolders ChannelFolder[]
+  webhookEndpoints WebhookEndpoint[]
+
+  @@index([authId])
+  @@index([email])
+  @@map("users")
+}
+
+// =============================================================================
+// SUBSCRIPTIONS
+// =============================================================================
+
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @unique @map("user_id") @db.Uuid
+  stripeCustomerId     String?            @unique @map("stripe_customer_id") @db.Text
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id") @db.Text
+  tier                 SubscriptionTier   @default(free)
+  status               SubscriptionStatus @default(active)
+  currentPeriodStart   DateTime?          @map("current_period_start") @db.Timestamptz()
+  currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz()
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  maxChannels          Int                @default(3) @map("max_channels") @db.Integer
+  pollingIntervalMins  Int                @default(60) @map("polling_interval_mins") @db.Integer
+  maxStorageBytes      BigInt             @default(524288000) @map("max_storage_bytes") @db.BigInt
+  historyDays          Int?               @map("history_days") @db.Integer
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@map("subscriptions")
+}
+
+// =============================================================================
+// API_KEYS
+// =============================================================================
+
+model ApiKey {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @map("user_id") @db.Uuid
+  telegramApiId    String    @map("telegram_api_id") @db.Text
+  telegramApiHash  String    @map("telegram_api_hash") @db.Text
+  encryptedSession String?   @map("encrypted_session") @db.Text
+  isConnected      Boolean   @default(false) @map("is_connected")
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz()
+  authError        String?   @map("auth_error") @db.Text
+  authErrorAt      DateTime? @map("auth_error_at") @db.Timestamptz()
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// =============================================================================
+// TRACKED_CHANNELS
+// =============================================================================
+
+model TrackedChannel {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  telegramChannelId     BigInt    @map("telegram_channel_id") @db.BigInt
+  username              String?   @db.Text
+  inviteHash            String?   @map("invite_hash") @db.Text
+  title                 String    @db.Text
+  description           String?   @db.Text
+  memberCount           Int?      @map("member_count") @db.Integer
+  photoUrl              String?   @map("photo_url") @db.Text
+  isBroadcast           Boolean   @default(true) @map("is_broadcast")
+  isPrivate             Boolean   @default(false) @map("is_private")
+  firstScrapedAt        DateTime? @map("first_scraped_at") @db.Timestamptz()
+  lastScrapedAt         DateTime? @map("last_scraped_at") @db.Timestamptz()
+  lastMessageId         BigInt?   @map("last_message_id") @db.BigInt
+  lastCheckedAt         DateTime? @map("last_checked_at") @db.Timestamptz()
+  totalMessages         Int       @default(0) @map("total_messages") @db.Integer
+  unreadCount           Int       @default(0) @map("unread_count") @db.Integer
+  isMonitoring          Boolean   @default(true) @map("is_monitoring")
+  monitoringPausedReason String?  @map("monitoring_paused_reason") @db.Text
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz()
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages             Message[]
+  mediaFiles           MediaFile[]
+  channelMemberHistory ChannelMemberHistory[]
+  channelFolderMembers ChannelFolderMember[]
+  jobs                 Job[]
+  alertRules           AlertRule[]
+  exports              Export[]
+  webhookEndpoints     WebhookEndpoint[]
+
+  @@unique([userId, telegramChannelId])
+  @@index([userId])
+  @@index([telegramChannelId])
+  @@index([userId, isMonitoring])
+  @@map("tracked_channels")
+}
+
+// =============================================================================
+// CHANNEL_MEMBER_HISTORY
+// =============================================================================
+
+model ChannelMemberHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  channelId   String   @map("channel_id") @db.Uuid
+  memberCount Int      @map("member_count") @db.Integer
+  recordedAt  DateTime @default(now()) @map("recorded_at") @db.Timestamptz()
+
+  channel TrackedChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId, recordedAt(sort: Desc)])
+  @@map("channel_member_history")
+}
+
+// =============================================================================
+// MESSAGES
+// =============================================================================
+
+model Message {
+  id                String    @id @default(uuid()) @db.Uuid
+  channelId         String    @map("channel_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  telegramMessageId BigInt    @map("telegram_message_id") @db.BigInt
+  senderId          BigInt?   @map("sender_id") @db.BigInt
+  senderName        String?   @map("sender_name") @db.Text
+  senderUsername    String?   @map("sender_username") @db.Text
+  text              String?   @db.Text
+  viewCount         Int       @default(0) @map("view_count") @db.Integer
+  forwardCount      Int       @default(0) @map("forward_count") @db.Integer
+  replyCount        Int       @default(0) @map("reply_count") @db.Integer
+  replyToMessageId  BigInt?   @map("reply_to_message_id") @db.BigInt
+  forwardFromId     BigInt?   @map("forward_from_id") @db.BigInt
+  forwardFromName   String?   @map("forward_from_name") @db.Text
+  isEdited          Boolean   @default(false) @map("is_edited")
+  editedAt          DateTime? @map("edited_at") @db.Timestamptz()
+  hasMedia          Boolean   @default(false) @map("has_media")
+  reactions         Json?     @map("reactions") @db.JsonB
+  searchVector      Unsupported("tsvector")? @map("search_vector")
+  telegramDate      DateTime  @map("telegram_date") @db.Timestamptz()
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  channel    TrackedChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaFiles MediaFile[]
+  alertEvents AlertEvent[]
+
+  @@unique([channelId, telegramMessageId])
+  @@index([channelId, telegramDate(sort: Desc)])
+  @@index([userId])
+  @@index([channelId, telegramMessageId])
+  @@index([channelId, hasMedia])
+  @@map("messages")
+}
+
+// =============================================================================
+// MEDIA_FILES
+// =============================================================================
+
+model MediaFile {
+  id              String    @id @default(uuid()) @db.Uuid
+  messageId       String    @map("message_id") @db.Uuid
+  channelId       String    @map("channel_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  r2Key           String    @unique @map("r2_key") @db.Text
+  r2Bucket        String    @map("r2_bucket") @db.Text
+  mediaType       MediaType @map("media_type")
+  originalFilename String?  @map("original_filename") @db.Text
+  mimeType        String?   @map("mime_type") @db.Text
+  fileSizeBytes   BigInt?   @map("file_size_bytes") @db.BigInt
+  width           Int?      @db.Integer
+  height          Int?      @db.Integer
+  durationSeconds Int?      @map("duration_seconds") @db.Integer
+  isDownloaded    Boolean   @default(false) @map("is_downloaded")
+  downloadFailed  Boolean   @default(false) @map("download_failed")
+  downloadError   String?   @map("download_error") @db.Text
+  downloadedAt    DateTime? @map("downloaded_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  message Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel TrackedChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([channelId, mediaType])
+  @@index([userId])
+  @@index([r2Key])
+  @@map("media_files")
+}
+
+// =============================================================================
+// STORAGE_USAGE
+// =============================================================================
+
+model StorageUsage {
+  userId    String   @id @map("user_id") @db.Uuid
+  usedBytes BigInt   @default(0) @map("used_bytes") @db.BigInt
+  fileCount Int      @default(0) @map("file_count") @db.Integer
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("storage_usage")
+}
+
+// =============================================================================
+// JOBS
+// =============================================================================
+
+model Job {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  channelId       String?   @map("channel_id") @db.Uuid
+  bullmqJobId     String?   @map("bullmq_job_id") @db.Text
+  type            JobType
+  status          JobStatus @default(pending)
+  progressCurrent Int       @default(0) @map("progress_current") @db.Integer
+  progressTotal   Int?      @map("progress_total") @db.Integer
+  messagesFetched Int?      @map("messages_fetched") @db.Integer
+  mediaDownloaded Int?      @map("media_downloaded") @db.Integer
+  errorMessage    String?   @map("error_message") @db.Text
+  startedAt       DateTime? @map("started_at") @db.Timestamptz()
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel TrackedChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  exports Export[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([channelId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("jobs")
+}
+
+// =============================================================================
+// ALERT_RULES (Phase 2)
+// =============================================================================
+
+model AlertRule {
+  id               String       @id @default(uuid()) @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+  channelId        String?      @map("channel_id") @db.Uuid
+  name             String       @db.Text
+  isActive         Boolean      @default(true) @map("is_active")
+  keywords         String[]     @db.Text
+  regexPattern     String?      @map("regex_pattern") @db.Text
+  deliveryChannel  AlertChannel @default(email) @map("delivery_channel")
+  deliveryTarget   String?      @map("delivery_target") @db.Text
+  cooldownMinutes  Int          @default(60) @map("cooldown_minutes") @db.Integer
+  lastTriggeredAt  DateTime?    @map("last_triggered_at") @db.Timestamptz()
+  totalTriggers    Int          @default(0) @map("total_triggers") @db.Integer
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel     TrackedChannel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  alertEvents AlertEvent[]
+
+  @@index([userId])
+  @@index([channelId])
+  @@index([userId, isActive])
+  @@map("alert_rules")
+}
+
+// =============================================================================
+// ALERT_EVENTS (Phase 2)
+// =============================================================================
+
+model AlertEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  ruleId         String   @map("rule_id") @db.Uuid
+  messageId      String   @map("message_id") @db.Uuid
+  matchedKeyword String?  @map("matched_keyword") @db.Text
+  delivered      Boolean  @default(false)
+  deliveryError  String?  @map("delivery_error") @db.Text
+  triggeredAt    DateTime @default(now()) @map("triggered_at") @db.Timestamptz()
+
+  rule    AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  message Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, triggeredAt(sort: Desc)])
+  @@map("alert_events")
+}
+
+// =============================================================================
+// EXPORTS
+// =============================================================================
+
+model Export {
+  id            String       @id @default(uuid()) @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  channelId     String       @map("channel_id") @db.Uuid
+  jobId         String?      @map("job_id") @db.Uuid
+  format        ExportFormat
+  fromDate      DateTime?    @map("from_date") @db.Timestamptz()
+  toDate        DateTime?    @map("to_date") @db.Timestamptz()
+  r2Key         String?      @map("r2_key") @db.Text
+  fileSizeBytes BigInt?      @map("file_size_bytes") @db.BigInt
+  rowCount      Int?         @map("row_count") @db.Integer
+  downloadUrl   String?      @map("download_url") @db.Text
+  expiresAt     DateTime?    @map("expires_at") @db.Timestamptz()
+  status        JobStatus    @default(pending)
+  errorMessage  String?      @map("error_message") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel TrackedChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  job     Job?            @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("exports")
+}
+
+// =============================================================================
+// CHANNEL_FOLDERS (Phase 2)
+// =============================================================================
+
+model ChannelFolder {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String   @db.Text
+  color     String?  @db.Text
+  position  Int      @default(0) @db.Integer
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members ChannelFolderMember[]
+
+  @@unique([userId, name])
+  @@map("channel_folders")
+}
+
+model ChannelFolderMember {
+  folderId  String   @map("folder_id") @db.Uuid
+  channelId String   @map("channel_id") @db.Uuid
+  addedAt   DateTime @default(now()) @map("added_at") @db.Timestamptz()
+
+  folder  ChannelFolder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  channel TrackedChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([folderId, channelId])
+  @@map("channel_folder_members")
+}
+
+// =============================================================================
+// WEBHOOK_ENDPOINTS (Phase 2 — Business tier)
+// =============================================================================
+
+model WebhookEndpoint {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  channelId     String?   @map("channel_id") @db.Uuid
+  url           String    @db.Text
+  secret        String?   @db.Text
+  isActive      Boolean   @default(true) @map("is_active")
+  lastCalledAt  DateTime? @map("last_called_at") @db.Timestamptz()
+  failureCount  Int       @default(0) @map("failure_count") @db.Integer
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel TrackedChannel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("webhook_endpoints")
+}
