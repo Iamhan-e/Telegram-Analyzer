@@ -16,14 +16,16 @@ export function createServerSupabase() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- options type is from @supabase/ssr CookieOptions
+        set(name: string, value: string, options: Record<string, unknown>) {
           try {
             cookieStore.set({ name, value, ...options });
           } catch {
             // Called from Server Component — ignore
           }
         },
-        remove(name: string, options: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- options type is from @supabase/ssr CookieOptions
+        remove(name: string, options: Record<string, unknown>) {
           try {
             cookieStore.set({ name, value: "", ...options });
           } catch {
