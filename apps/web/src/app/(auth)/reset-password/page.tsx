@@ -8,6 +8,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const resetSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -16,7 +17,7 @@ const resetSchema = z.object({
 type ResetForm = z.infer<typeof resetSchema>;
 
 export default function ResetPasswordPage() {
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +31,6 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (data: ResetForm) => {
     setLoading(true);
-    setError(null);
 
     const supabase = createClient();
     const { error: authError } = await supabase.auth.resetPasswordForEmail(
@@ -39,11 +39,12 @@ export default function ResetPasswordPage() {
     );
 
     if (authError) {
-      setError(authError.message);
+      toast.error(authError.message);
       setLoading(false);
       return;
     }
 
+    toast.success("Reset link sent to your email.");
     setSuccess(true);
     setLoading(false);
   };
@@ -73,12 +74,6 @@ export default function ResetPasswordPage() {
           ) : (
             <>
               <h2 className="font-mono text-[13px] text-text mb-6">Reset password</h2>
-
-              {error && (
-                <div className="bg-red-dim border border-red/30 rounded-card px-3 py-2 mb-4 font-mono text-[11px] text-red">
-                  {error}
-                </div>
-              )}
 
               <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="flex flex-col gap-4">
