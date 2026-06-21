@@ -12,6 +12,9 @@
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces"
   },
+  "overrides": {
+    "zod": "3.23.8"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
