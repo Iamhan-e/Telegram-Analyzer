@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const signupSchema = z
   .object({
@@ -24,8 +24,7 @@ const signupSchema = z
 type SignupForm = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +38,6 @@ export default function SignupPage() {
 
   const onSubmit = async (data: SignupForm) => {
     setLoading(true);
-    setError(null);
 
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signUp({
@@ -48,11 +46,12 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      toast.error(authError.message);
       setLoading(false);
       return;
     }
 
+    toast.success("Account created! Check your email for a confirmation link.");
     setSuccess(true);
     setLoading(false);
   };
@@ -94,12 +93,6 @@ export default function SignupPage() {
           className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8"
         >
           <h2 className="font-mono text-[13px] text-text mb-6">Create account</h2>
-
-          {error && (
-            <div className="bg-red-dim border border-red/30 rounded-card px-3 py-2 mb-4 font-mono text-[11px] text-red">
-              {error}
-            </div>
-          )}
 
           <div className="flex flex-col gap-4">
             <Input
