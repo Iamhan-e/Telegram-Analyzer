@@ -9,6 +9,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -19,7 +20,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
 
   const {
@@ -32,7 +33,6 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
-    setError(null);
 
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
@@ -41,7 +41,7 @@ export default function LoginPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      toast.error(authError.message);
       setLoading(false);
       return;
     }
@@ -69,12 +69,6 @@ export default function LoginPage() {
           className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8"
         >
           <h2 className="font-mono text-[13px] text-text mb-6">Sign in</h2>
-
-          {error && (
-            <div className="bg-red-dim border border-red/30 rounded-card px-3 py-2 mb-4 font-mono text-[11px] text-red">
-              {error}
-            </div>
-          )}
 
           <div className="flex flex-col gap-4">
             <Input
