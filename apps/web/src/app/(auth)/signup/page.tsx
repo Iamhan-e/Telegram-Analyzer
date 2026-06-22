@@ -34,7 +34,13 @@ export default function SignupPage() {
     formState: { errors },
   } = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
+
+  const onError = () => {
+    // Validation errors are displayed inline via formState.errors — no toast needed
+  };
 
   const onSubmit = async (data: SignupForm) => {
     setLoading(true);
@@ -89,7 +95,7 @@ export default function SignupPage() {
       {/* Right form panel */}
       <div className="flex flex-col justify-center items-center w-full lg:w-1/2 px-6">
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit, onError)}
           className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8"
         >
           <h2 className="font-mono text-[13px] text-text mb-6">Create account</h2>
