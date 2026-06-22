@@ -29,7 +29,13 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
+
+  const onError = () => {
+    // Validation errors are displayed inline via formState.errors
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
@@ -65,7 +71,7 @@ export default function LoginPage() {
       {/* Right form panel */}
       <div className="flex flex-col justify-center items-center w-full lg:w-1/2 px-6">
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit, onError)}
           className="w-full max-w-[380px] bg-surface border border-border rounded-panel p-8"
         >
           <h2 className="font-mono text-[13px] text-text mb-6">Sign in</h2>
