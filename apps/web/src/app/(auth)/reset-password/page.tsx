@@ -27,7 +27,13 @@ export default function ResetPasswordPage() {
     formState: { errors },
   } = useForm<ResetForm>({
     resolver: zodResolver(resetSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
   });
+
+  const onError = () => {
+    // Validation errors are displayed inline via formState.errors
+  };
 
   const onSubmit = async (data: ResetForm) => {
     setLoading(true);
@@ -75,7 +81,7 @@ export default function ResetPasswordPage() {
             <>
               <h2 className="font-mono text-[13px] text-text mb-6">Reset password</h2>
 
-              <form onSubmit={handleSubmit(onSubmit)}>
+              <form onSubmit={handleSubmit(onSubmit, onError)}>
                 <div className="flex flex-col gap-4">
                   <Input
                     label="email address"
