@@ -31,9 +31,16 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // getSession() reads and validates the JWT locally from cookies — no network round-trip.
+  // If it throws (e.g. misconfigured env vars, Supabase JWKS unreachable), treat the
+  // user as unauthenticated rather than letting the error propagate and leaking the page.
+  let session = null;
+  try {
+    const result = await supabase.auth.getSession();
+    session = result.data.session ?? null;
+  } catch (err) {
+    console.error("Middleware: getSession() failed — treating as unauthenticated:", err);
+  }
 
   const { pathname } = request.nextUrl;
 
