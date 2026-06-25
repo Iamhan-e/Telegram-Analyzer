@@ -38,25 +38,30 @@ export default function SignupPage() {
     reValidateMode: "onChange",
   });
 
-  const onError = () => {
-    // Validation errors are displayed inline via formState.errors — no toast needed
+  // 🔍 Updated to print exact Zod schema mismatches when submission blocks
+  const onError = (formErrors: any) => {
+    console.log("❌ Form validation failed fields:", formErrors);
   };
 
   const onSubmit = async (data: SignupForm) => {
     setLoading(true);
+    console.log("🚀 Submitting registration to Supabase for:", data.email);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
     });
 
+    // If your DB trigger fails, it bubbles up into this authError check
     if (authError) {
+      console.error("❌ Supabase Auth error:", authError);
       toast.error(authError.message);
       setLoading(false);
       return;
     }
 
+    console.log("✅ User created successfully in auth.users:", authData.user);
     toast.success("Account created! Check your email for a confirmation link.");
     setSuccess(true);
     setLoading(false);
