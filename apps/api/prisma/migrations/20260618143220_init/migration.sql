@@ -21,7 +21,7 @@ CREATE TYPE "export_format" AS ENUM ('csv', 'json');
 
 -- CreateTable
 CREATE TABLE "users" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "auth_id" UUID NOT NULL,
     "email" TEXT NOT NULL,
     "display_name" TEXT,
@@ -36,7 +36,7 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "subscriptions" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "stripe_customer_id" TEXT,
     "stripe_subscription_id" TEXT,
@@ -57,7 +57,7 @@ CREATE TABLE "subscriptions" (
 
 -- CreateTable
 CREATE TABLE "api_keys" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "telegram_api_id" TEXT NOT NULL,
     "telegram_api_hash" TEXT NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE "api_keys" (
 
 -- CreateTable
 CREATE TABLE "tracked_channels" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "telegram_channel_id" BIGINT NOT NULL,
     "username" TEXT,
@@ -102,7 +102,7 @@ CREATE TABLE "tracked_channels" (
 
 -- CreateTable
 CREATE TABLE "channel_member_history" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "channel_id" UUID NOT NULL,
     "member_count" INTEGER NOT NULL,
     "recorded_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -112,7 +112,7 @@ CREATE TABLE "channel_member_history" (
 
 -- CreateTable
 CREATE TABLE "messages" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "channel_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
     "telegram_message_id" BIGINT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE "messages" (
 
 -- CreateTable
 CREATE TABLE "media_files" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "message_id" UUID NOT NULL,
     "channel_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE "storage_usage" (
 
 -- CreateTable
 CREATE TABLE "jobs" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "channel_id" UUID,
     "bullmq_job_id" TEXT,
@@ -196,7 +196,7 @@ CREATE TABLE "jobs" (
 
 -- CreateTable
 CREATE TABLE "alert_rules" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "channel_id" UUID,
     "name" TEXT NOT NULL,
@@ -216,7 +216,7 @@ CREATE TABLE "alert_rules" (
 
 -- CreateTable
 CREATE TABLE "alert_events" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rule_id" UUID NOT NULL,
     "message_id" UUID NOT NULL,
     "matched_keyword" TEXT,
@@ -229,7 +229,7 @@ CREATE TABLE "alert_events" (
 
 -- CreateTable
 CREATE TABLE "exports" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "channel_id" UUID NOT NULL,
     "job_id" UUID,
@@ -251,7 +251,7 @@ CREATE TABLE "exports" (
 
 -- CreateTable
 CREATE TABLE "channel_folders" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "color" TEXT,
@@ -273,7 +273,7 @@ CREATE TABLE "channel_folder_members" (
 
 -- CreateTable
 CREATE TABLE "webhook_endpoints" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "channel_id" UUID,
     "url" TEXT NOT NULL,
