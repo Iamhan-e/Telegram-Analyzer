@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
@@ -19,7 +18,6 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -40,20 +38,36 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
+    try {
+      const supabase = createClient();
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
 
-    if (authError) {
-      toast.error(authError.message);
+      if (authError) {
+        toast.error(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      // If Supabase returns ok but no session, the email likely isn't confirmed yet
+      if (!authData.session) {
+        toast.error(
+          "Please confirm your email address first. Check your inbox for a confirmation link."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Hard navigation guarantees the new auth cookies are sent to the server.
+      // router.push() can race against cookie persistence, causing the middleware
+      // to read a stale (unauthenticated) request and redirect back to /login.
+      window.location.href = "/dashboard";
+    } catch {
+      toast.error("Something went wrong. Please try again.");
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard");
-    router.refresh();
   };
 
   return (
