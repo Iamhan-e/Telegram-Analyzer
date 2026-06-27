@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import type { BadgeVariant } from "@/components/ui/Badge";
@@ -78,25 +78,7 @@ const MEDIA_CHIP_COLORS: Record<string, BadgeVariant> = {
 // ── MessageCard ─────────────────────────────────────────────────────────────
 
 function MessageCard({ message, highlightKeywords }: MessageCardProps) {
-  const [expanded, setExpanded] = useRef(false); // will be replaced with state
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const [isExpanded, setIsExpanded] =
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    (() => {
-      // This is a hack to use let/state — fix with proper useState
-      const [s, setS] = (() => {
-        let v = false;
-        const get = () => v;
-        const set = (_v: boolean) => {
-          v = _v;
-        };
-        return [get, set] as const;
-      })();
-      return [s, setS] as const;
-    })();
-
-  // Actually, let me use a proper useState pattern below
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const {
     id,
