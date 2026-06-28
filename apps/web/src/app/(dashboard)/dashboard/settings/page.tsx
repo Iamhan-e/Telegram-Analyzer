@@ -258,30 +258,33 @@ function ApiKeyTab() {
           onChange={(e) => setApiHash(e.target.value)}
         />
 
-        <div className="flex flex-col gap-1">
-          <label className="font-mono text-[9px] uppercase tracking-[0.1em] text-text3">
-            Session string
-          </label>
-          <textarea
-            className="bg-surface2 border border-border text-text text-[12px] px-3 py-2 rounded-card transition-all outline-none placeholder:text-text3 focus:border-accent resize-none font-mono"
-            rows={3}
-            placeholder="Your Telethon session string"
-            value={sessionString}
-            onChange={(e) => setSessionString(e.target.value)}
-            spellCheck={false}
-          />
-          <p className="font-mono text-[9px] text-text3 mt-0.5">
-            Generate a session string using{" "}
-            <a
-              href="https://docs.telethon.dev/en/stable/concepts/sessions.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:underline"
-            >
-              Telethon&apos;s StringSession
-            </a>
-          </p>
-        </div>
+        <Input
+          label="Session string"
+          type="password"
+          placeholder="Your Telethon session string"
+          value={sessionString}
+          onChange={(e) => setSessionString(e.target.value)}
+        />
+        <p className="font-mono text-[9px] text-text3 -mt-2 mb-2">
+          Get your API ID and hash from{" "}
+          <a
+            href="https://my.telegram.org/apps"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline"
+          >
+            my.telegram.org
+          </a>
+          , then generate a session string using{" "}
+          <a
+            href="https://docs.telethon.dev/en/stable/concepts/sessions.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline"
+          >
+            Telethon&apos;s StringSession
+          </a>
+        </p>
 
         <Button
           variant="primary"
