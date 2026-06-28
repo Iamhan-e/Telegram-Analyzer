@@ -7,6 +7,7 @@ config({ path: resolve(__dirname, '..', '.env') });
 import express from 'express';
 import { authMiddleware } from './middleware/auth';
 import authRouter from './routes/auth';
+import keysRouter from './routes/keys';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
@@ -29,6 +30,9 @@ app.use(authRouter);
 
 // Apply JWT auth to all other routes
 app.use(authMiddleware);
+
+// API key management
+app.use(keysRouter);
 
 // Example protected route — remove once real routes are added
 app.get('/api/me', (req, res) => {
