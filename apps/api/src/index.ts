@@ -8,6 +8,7 @@ import express from 'express';
 import { authMiddleware } from './middleware/auth';
 import authRouter from './routes/auth';
 import keysRouter from './routes/keys';
+import channelsRouter from './routes/channels';
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
@@ -33,6 +34,9 @@ app.use(authMiddleware);
 
 // API key management
 app.use(keysRouter);
+
+// Channel management
+app.use(channelsRouter);
 
 // Example protected route — remove once real routes are added
 app.get('/api/me', (req, res) => {
