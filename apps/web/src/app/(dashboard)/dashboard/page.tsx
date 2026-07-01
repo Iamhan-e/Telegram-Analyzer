@@ -82,6 +82,54 @@ export default function DashboardPage() {
     fetchChannels();
   }, [fetchChannels]);
 
+  const handleToggle = async (channelId: string, newValue: boolean) => {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/channels/${channelId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ is_monitoring: newValue }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to update channel");
+      fetchChannels();
+      toast.success(newValue ? "Monitoring resumed" : "Monitoring paused");
+    } catch {
+      toast.error("Failed to update channel");
+    }
+  };
+
+  const handleDelete = async (channelId: string) => {
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/channels/${channelId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to delete channel");
+      fetchChannels();
+      toast.success("Channel removed");
+    } catch {
+      toast.error("Failed to delete channel");
+    }
+  };
+
   // ── Loading state ─────────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -181,7 +229,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {channels.map((ch) => (
-          <ChannelCard key={ch.id} channel={ch} />
+          <ChannelCard key={ch.id} channel={ch} onToggle={handleToggle} onDelete={handleDelete} />
         ))}
       </div>
 
